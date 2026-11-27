@@ -24,3 +24,6 @@ eval_logs/
 run_logs*/
 paper_results/*
 doc/
+
+.venv/
+factory_runs/

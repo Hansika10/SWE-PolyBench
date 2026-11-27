@@ -2,7 +2,7 @@
 line-length = 100
 
 [tool.isort]
-known_first_party = ["poly_bench_evaluation"]
+known_first_party = ["poly_bench_evaluation", "software_factory"]
 
 # required for compatibility with black:
 profile = "black"
@@ -50,3 +50,6 @@ dependencies = [
     "whatthepatch",
     "datasets"
 ]
+
+[project.scripts]
+software-factory = "software_factory.cli:main"

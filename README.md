@@ -80,6 +80,31 @@ The test run logs of each instance will also be stored in `./run_logs_{language}
 ## Submission
 To make a submission to SWE-PolyBench leaderboard, please follow this [README](https://github.com/amazon-science/SWE-PolyBench/blob/submission/README.md).
 
+## Software Factory (issue -> patch agent pipeline)
+`src/software_factory` is an agent pipeline that takes an issue and produces a patch, scored with this repo's evaluator:
+
+1. **Intake**: loads an instance and exposes only agent-safe fields (issue text, repo, base commit). The agent never sees the gold patch, test patch, F2P/P2P or test command.
+2. **Plan**: a read-only agent explores the repo inside the instance's Docker container and submits a plan.
+3. **Code**: an agent edits the code with `bash`, `search`, `view_file`, `str_replace` and `write_file`.
+4. **Verify**: an agent writes and runs a reproduction test plus the related existing tests. On failure, its feedback goes back to the Code stage (`--max-iterations`).
+5. **PR / prediction**: the diff (scratch files and test files removed) is written to `predictions.jsonl`, together with a PR title and body. In live mode it can open a real GitHub PR.
+6. **Score**: runs `evaluate_predictions` on only the instances that were attempted.
+
+LLM access goes through AWS Bedrock (Converse API). `--llm mock` runs the whole pipeline without a model.
+
+```sh
+pip install -e .
+export AWS_REGION=us-east-1 FACTORY_BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-20250514-v1:0  # plus AWS credentials
+# Resolve 2 Verified instances per language and score them
+software-factory run --per-language 2 --score --output-dir factory_runs/pbv8
+# Score an existing predictions file
+software-factory score --predictions factory_runs/pbv8/predictions.jsonl --output-dir factory_runs/pbv8/eval
+# Live mode: resolve a GitHub issue and open a draft PR (needs an authenticated `gh`)
+software-factory issue owner/repo#123 --open-pr
+```
+Each run writes `predictions.jsonl`, plus `artifacts/<instance_id>/` containing the plan, per-stage transcripts, `patch.diff`, `pr.md` and `result.json`. If you pass `--score`, it also writes `eval/summary.json`.
+Tests: `pytest test/software_factory`. The Docker harness check is opt-in: `FACTORY_DOCKER_TESTS=1 pytest -k docker`.
+
 ## ✍️ Citation
 If you find our work helpful, please use the following citation.
 ```
